@@ -17,25 +17,20 @@ import re
 # get_best_closing_times("BEGIN N N END BEGIN Y Y\n BEGIN BEGIN N N END")
 #   should return an array: [0, 2]
 
+
 def get_best_closing_times(aggregate_log: str) -> list:
-    print("INPUT: ", aggregate_log.replace("\n", "\\n"))
     response = []
     valid_sequences = []
-    current_sequence = []
-    for i, begin_split in enumerate(aggregate_log.split("BEGIN")):
+    for begin_split in aggregate_log.split("BEGIN"):
         begin_split = begin_split.replace(" ", "_") \
             .replace("\n", "")
-        end_valid_sequence = "_END" in begin_split
-        if ("_N_" in begin_split or "_Y_" in begin_split) and end_valid_sequence:
-            # Append from the start of the sequence until the first "END" any subsequent end's are invalid/nested
-            # The end occurrence is guaranteed in the string because of the check in the if statement
+        is_valid_sequence = "_END" in begin_split
+        if ("_N_" in begin_split or "_Y_" in begin_split) and is_valid_sequence:
             first_end_occurrence = [m.start() for m in re.finditer("END", begin_split)][0]
-            current_sequence.append(begin_split[0:first_end_occurrence])
-        if end_valid_sequence:
-            # It is the end of a valid sequence because we are splitting by BEGIN
+            current_sequence = "".join(begin_split[0:first_end_occurrence])
             valid_sequences.append(current_sequence)
-            current_sequence = []
-    # For each valid sequence join it all together (since we know its 1 sequence) and parse out any END's
+
+    print(valid_sequences)
     for sequence in valid_sequences:
         joined = "".join(sequence).replace("_", " ").strip()
         response.append(find_best_closing_time(joined))
@@ -49,7 +44,6 @@ def find_best_closing_time(store_log: str) -> int:
     for hour in range(0, len(list_log) + 1):  # Produces [0, 1, 2, 3, 4]
         closing_penalties.append((hour, compute_penalty(store_log, hour)))
 
-    print(closing_penalties)
     return min(closing_penalties, key=lambda n: n[1])[0]
 
 
@@ -60,7 +54,7 @@ def compute_penalty(store_log: str, closing_time: int) -> int:
     list_log = store_log.split(" ")
 
     if closing_time == 0:
-        filtered_list = list(filter(lambda hour: hour.upper() == "Y", list_log))
+        filtered_list = list(filter(lambda h: h.upper() == "Y", list_log))
         return len(filtered_list)
 
     penalty = 0
