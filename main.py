@@ -1,3 +1,4 @@
+import re
 # compute_penalty("Y Y N Y", 0) should return 3
 # compute_penalty("N Y N Y", 2) should return 2
 # compute_penalty("Y Y N Y", 4) should return 1
@@ -17,29 +18,27 @@
 #   should return an array: [0, 2]
 
 def get_best_closing_times(aggregate_log: str) -> list:
+    print("INPUT: ", aggregate_log.replace("\n", "\\n"))
     response = []
     valid_sequences = []
     current_sequence = []
     for i, begin_split in enumerate(aggregate_log.split("BEGIN")):
         begin_split = begin_split.replace(" ", "_") \
             .replace("\n", "")
-        end_valid_sequence = begin_split.endswith("END") or begin_split.endswith("END_")
-        if "_N_" in begin_split or "_Y_" in begin_split:
-            current_sequence.append(begin_split)
+        end_valid_sequence = "_END" in begin_split
+        if ("_N_" in begin_split or "_Y_" in begin_split) and end_valid_sequence:
+            # Append from the start of the sequence until the first "END" any subsequent end's are invalid/nested
+            # The end occurrence is guaranteed in the string because of the check in the if statement
+            first_end_occurrence = [m.start() for m in re.finditer("END", begin_split)][0]
+            current_sequence.append(begin_split[0:first_end_occurrence])
         if end_valid_sequence:
             # It is the end of a valid sequence because we are splitting by BEGIN
             valid_sequences.append(current_sequence)
             current_sequence = []
     # For each valid sequence join it all together (since we know its 1 sequence) and parse out any END's
     for sequence in valid_sequences:
-        joined = "".join(sequence)
-        joined = joined.replace("_END_", "") \
-            .replace("_END", "")\
-            .replace("_", "")
-
-        # Will be left with YYYYNNYNYNYYN
-        print(" ".join(joined))
-        response.append(find_best_closing_time(" ".join(joined)))
+        joined = "".join(sequence).replace("_", " ").strip()
+        response.append(find_best_closing_time(joined))
     return response
 
 
@@ -47,9 +46,10 @@ def find_best_closing_time(store_log: str) -> int:
     closing_penalties = []
     list_log = store_log.split(" ")
 
-    for hour in range(0, len(list_log)):  # Produces [0, 1, 2, 3, 4]
+    for hour in range(0, len(list_log) + 1):  # Produces [0, 1, 2, 3, 4]
         closing_penalties.append((hour, compute_penalty(store_log, hour)))
 
+    print(closing_penalties)
     return min(closing_penalties, key=lambda n: n[1])[0]
 
 
@@ -82,15 +82,28 @@ def compute_penalty(store_log: str, closing_time: int) -> int:
     return penalty
 
 
-if __name__ == "__main__":
+def run_asserts():
     assert compute_penalty("Y Y N Y", 4) == 1
-    assert find_best_closing_time("Y Y", )
-
-    print(get_best_closing_times("BEGIN Y Y END \nBEGIN N N END"))
+    assert find_best_closing_time("Y Y") == 2
     assert get_best_closing_times("BEGIN Y Y END \nBEGIN N N END") == [2, 0]
     print("-----------------------------")
     assert get_best_closing_times("BEGIN BEGIN \nBEGIN N N BEGIN Y Y\n END N N END") == [2]
     print("-----------------------------")
     assert get_best_closing_times("BEGIN N N END BEGIN Y Y\n END BEGIN Y N END") == [0, 2, 1]
     print("-----------------------------")
-    assert get_best_closing_times("BEGIN N N END BEGIN Y Y\n BEGIN BEGIN N N END") == [0, 2]
+    assert get_best_closing_times("BEGIN N N END BEGIN Y Y\n BEGIN BEGIN N N END") == [0, 0]
+
+
+if __name__ == "__main__":
+    assert compute_penalty("Y Y N Y", 4) == 1
+    assert find_best_closing_time("Y Y") == 2
+
+    print(get_best_closing_times("BEGIN Y Y END \nBEGIN N N END"))
+    print("-----------------------------")
+    get_best_closing_times("BEGIN BEGIN \nBEGIN N N BEGIN Y Y\n END N N END")
+    print("-----------------------------")
+    get_best_closing_times("BEGIN N N END BEGIN Y Y\n END BEGIN Y N END")
+    print("-----------------------------")
+    get_best_closing_times("BEGIN N N END BEGIN Y Y\n BEGIN BEGIN N N END")
+
+    run_asserts()
