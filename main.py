@@ -30,7 +30,6 @@ def get_best_closing_times(aggregate_log: str) -> list:
             current_sequence = "".join(begin_split[0:first_end_occurrence])
             valid_sequences.append(current_sequence)
 
-    print(valid_sequences)
     for sequence in valid_sequences:
         joined = "".join(sequence).replace("_", " ").strip()
         response.append(find_best_closing_time(joined))
